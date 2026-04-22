@@ -1,0 +1,18 @@
+﻿# Godot 4+
+.godot/
+*.translation
+*.import
+export_presets.cfg
+export.cfg
+export/
+.mono/
+data_*/
+mono_crash.*.json
+.DS_Store
+Thumbs.db
+*~
+*.blend1
+*.tmp
+*.log
+.vscode/
+.idea/

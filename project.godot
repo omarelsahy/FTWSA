@@ -1,0 +1,25 @@
+; Engine configuration file — Godot 4.x
+config_version=5
+
+[application]
+config/name="FTWSA"
+config/description="2D sidescroller — movement, parry, lethality (Godot 4)"
+run/main_scene="res://scenes/main.tscn"
+run/max_fps=60
+config/features=PackedStringArray("4.3", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+GameInput="*res://autoload/game_input.gd"
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+
+[physics]
+2d/default_gravity=980.0
+common/physics_ticks_per_second=60
+
+[rendering]
+textures/canvas_textures/default_texture_filter=0

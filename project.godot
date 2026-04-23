@@ -6,7 +6,7 @@ config/name="FTWSA"
 config/description="2D sidescroller — movement, parry, lethality (Godot 4)"
 run/main_scene="res://scenes/main.tscn"
 run/max_fps=60
-config/features=PackedStringArray("4.3", "Forward Plus")
+config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]

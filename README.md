@@ -6,7 +6,7 @@ PC-first 2D sidescroller: platform-fighter–inspired movement, parry-centric co
 
 ## Run
 
-1. Install [Godot 4.3+](https://godotengine.org/download) (Forward Plus renderer is set in the project).
+1. Install [Godot 4.6+](https://godotengine.org/download) (Forward Plus renderer is set in the project; 4.6 matches the current `config/features` tag).
 2. **Import** this folder as a project (or open `project.godot`).
 3. Press **F5** — you should see a debug HUD: movement vectors, jump/parry/dodge flags, FPS capped at **60** and physics at **60 Hz**.
 

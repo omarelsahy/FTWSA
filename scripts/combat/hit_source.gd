@@ -21,6 +21,9 @@ enum ParryOutcome { DEFLECT, REFLECT, COUNTER_WINDOW, NONE }
 @export var reflect_escape_horizontal_only: bool = true
 ## Minimum speed applied when reflecting if `travel_velocity` is near zero.
 @export var reflect_min_speed: float = 260.0
+## After REFLECT, set this `Polygon2D` node's fill color (empty name = skip).
+@export var reflect_visual_polygon_name: StringName = &"BoltVisual"
+@export var reflected_visual_color: Color = Color(0.2, 0.88, 1.0, 1.0)
 
 var _phase: Phase = Phase.STARTUP
 var _phase_frames_left: int = 0
@@ -104,6 +107,7 @@ func try_apply_parry(player: Node2D = null) -> ParryOutcome:
 			_set_reflect_velocity_away_from(player)
 		else:
 			travel_velocity.x *= -1.0
+		_apply_reflect_visual()
 		_reflect_parry_cooldown = reflect_parry_cooldown_frames
 		return ParryOutcome.REFLECT
 
@@ -138,3 +142,11 @@ func _set_reflect_velocity_away_from(player: Node2D) -> void:
 			if rel.length_squared() < 0.0001:
 				rel = Vector2.RIGHT
 		travel_velocity = rel.normalized() * speed
+
+
+func _apply_reflect_visual() -> void:
+	if reflect_visual_polygon_name.is_empty():
+		return
+	var vis := get_node_or_null(String(reflect_visual_polygon_name))
+	if vis is Polygon2D:
+		(vis as Polygon2D).color = reflected_visual_color

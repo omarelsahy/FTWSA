@@ -1,0 +1,1 @@
+Drop looping OGG (or WAV imported in Godot) here as explore_loop.ogg for the greybox autoload (see autoload/greybox_audio.gd). Optional second stem dread_bed.ogg can be wired later for encounter states.

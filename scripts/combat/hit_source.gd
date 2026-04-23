@@ -24,21 +24,38 @@ enum ParryOutcome { DEFLECT, REFLECT, COUNTER_WINDOW, NONE }
 ## After REFLECT, set this `Polygon2D` node's fill color (empty name = skip).
 @export var reflect_visual_polygon_name: StringName = &"BoltVisual"
 @export var reflected_visual_color: Color = Color(0.2, 0.88, 1.0, 1.0)
+## Wait this many physics frames before the first startup phase (boss pacing / staggered attacks).
+@export var defer_begin_frames: int = 0
 
 var _phase: Phase = Phase.STARTUP
 var _phase_frames_left: int = 0
 var _parry_consumed: bool = false
 var _reflect_parry_cooldown: int = 0
+var _waiting_first_begin: bool = false
+var _defer_begin_remaining: int = 0
 
 
 func _ready() -> void:
 	monitoring = false
 	collision_layer = 4 ## enemy_attack (project layer_3)
 	collision_mask = 0
-	_begin_startup()
+	if defer_begin_frames > 0:
+		_waiting_first_begin = true
+		_defer_begin_remaining = defer_begin_frames
+	else:
+		_waiting_first_begin = false
+		_begin_startup()
 
 
 func _physics_process(delta: float) -> void:
+	if _waiting_first_begin:
+		if _defer_begin_remaining > 0:
+			_defer_begin_remaining -= 1
+		if _defer_begin_remaining == 0:
+			_begin_startup()
+			_waiting_first_begin = false
+		return
+
 	if travel_velocity.length_squared() > 0.0001:
 		global_position += travel_velocity * delta
 

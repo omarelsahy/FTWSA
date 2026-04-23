@@ -14,6 +14,10 @@ enum MoveState { GROUND_IDLE, GROUND_RUN, AIR_RISE, AIR_FALL }
 @export var config: MovementConfig
 @export var parry_window_frames: int = 7
 @export var counter_window_frames: int = 48
+@export var camera_limit_left: int = -800
+@export var camera_limit_right: int = 4400
+@export var camera_limit_top: int = -600
+@export var camera_limit_bottom: int = 900
 
 var _coyote_frames_left: int = 0
 var _jump_buffer_frames_left: int = 0
@@ -47,6 +51,12 @@ func _ready() -> void:
 	_parry_box.monitorable = true
 	_parry_box.monitoring = true
 	_parry_shape.disabled = true
+
+	var cam := $Camera2D as Camera2D
+	cam.limit_left = camera_limit_left
+	cam.limit_right = camera_limit_right
+	cam.limit_top = camera_limit_top
+	cam.limit_bottom = camera_limit_bottom
 
 
 func _physics_process(delta: float) -> void:

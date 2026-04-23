@@ -1,0 +1,49 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/melee_test.tscn" id="3_melee"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/projectile_test.tscn" id="4_proj"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/mini_boss.tscn" id="5_boss"]
+[ext_resource type="PackedScene" path="res://scenes/props/greybox_platform.tscn" id="6_plat"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="World" type="Node2D" parent="."]
+
+[node name="PlatformStart" parent="World" instance=ExtResource("6_plat")]
+platform_size = Vector2(760, 120)
+position = Vector2(380, 660)
+
+[node name="PlatformLedge" parent="World" instance=ExtResource("6_plat")]
+platform_size = Vector2(280, 40)
+position = Vector2(1000, 520)
+
+[node name="PlatformMid" parent="World" instance=ExtResource("6_plat")]
+platform_size = Vector2(900, 120)
+position = Vector2(1450, 660)
+
+[node name="PlatformArena" parent="World" instance=ExtResource("6_plat")]
+platform_size = Vector2(2400, 120)
+position = Vector2(3100, 660)
+
+[node name="Player" parent="World" instance=ExtResource("2_player")]
+position = Vector2(100, 578)
+
+[node name="MeleeTest" parent="World" instance=ExtResource("3_melee")]
+position = Vector2(620, 578)
+
+[node name="ProjectileTest" parent="World" instance=ExtResource("4_proj")]
+position = Vector2(1180, 578)
+
+[node name="MiniBoss" parent="World" instance=ExtResource("5_boss")]
+position = Vector2(3100, 578)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="DebugLabel" type="Label" parent="UI"]
+offset_left = 16.0
+offset_top = 16.0
+theme_override_font_sizes/font_size = 18
+text = "FTWSA"

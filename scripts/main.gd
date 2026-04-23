@@ -6,7 +6,14 @@ extends Node2D
 
 
 func _ready() -> void:
-	_debug.text = "FTWSA — move with stick/D-pad or A/D; Space jump; E / RB parry; Shift/Z dodge"
+	var path := ""
+	var sc := get_tree().current_scene
+	if sc != null:
+		path = sc.scene_file_path
+	if path.ends_with("vertical_slice.tscn"):
+		_debug.text = "Vertical slice — gaps + ledge → parry drills → boss arena (jab + long UNPARRYABLE slam). E / RB parry."
+	else:
+		_debug.text = "FTWSA — move with stick/D-pad or A/D; Space jump; E / RB parry; Shift/Z dodge"
 
 
 func _process(_delta: float) -> void:

@@ -1,5 +1,5 @@
 extends Node2D
-## Boot scene: fixed-step HUD + player movement debug.
+## Boot scene: HUD (after physics) + player movement / combat debug.
 
 @onready var _debug: Label = $UI/DebugLabel
 @onready var _player: Player = $World/Player
@@ -9,7 +9,7 @@ func _ready() -> void:
 	_debug.text = "FTWSA — move with stick/D-pad or A/D; Space jump; E parry; Shift/Z dodge"
 
 
-func _physics_process(_delta: float) -> void:
+func _process(_delta: float) -> void:
 	var move := Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	var fps := Engine.get_frames_per_second()
 	var hz := int(ProjectSettings.get_setting("physics/common/physics_ticks_per_second"))

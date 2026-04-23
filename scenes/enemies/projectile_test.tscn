@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/hit_source.gd" id="1_hit"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_proj"]
+size = Vector2(22, 22)
+
+[node name="ProjectileTest" type="Area2D"]
+script = ExtResource("1_hit")
+startup_frames = 1
+active_frames = 6000
+recovery_frames = 1
+parry_policy = 0
+outcome_on_parry = 1
+loop_attack = false
+travel_velocity = Vector2(-280, 0)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_proj")

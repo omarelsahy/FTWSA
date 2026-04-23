@@ -1,0 +1,21 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/combat/hit_source.gd" id="1_hit"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_melee"]
+size = Vector2(140, 36)
+
+[node name="MeleeTest" type="Node2D"]
+
+[node name="HitSource" type="Area2D" parent="."]
+position = Vector2(-96, 0)
+script = ExtResource("1_hit")
+startup_frames = 14
+active_frames = 6
+recovery_frames = 22
+parry_policy = 0
+outcome_on_parry = 2
+loop_attack = true
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HitSource"]
+shape = SubResource("RectangleShape2D_melee")

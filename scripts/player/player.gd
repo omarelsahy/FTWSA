@@ -1,23 +1,52 @@
 class_name Player
 extends CharacterBody2D
-## Platform-fighter–style horizontal control with coyote time + jump buffer.
+## Platform-fighter–style horizontal control with coyote time + jump buffer + parry window.
+
+const HitSourceScript := preload("res://scripts/combat/hit_source.gd")
+## Must match `HitSource.ParryOutcome` declaration order.
+const PARRY_OUTCOME_DEFLECT := 0
+const PARRY_OUTCOME_REFLECT := 1
+const PARRY_OUTCOME_COUNTER := 2
+const PARRY_OUTCOME_NONE := 3
 
 enum MoveState { GROUND_IDLE, GROUND_RUN, AIR_RISE, AIR_FALL }
 
 @export var config: MovementConfig
+@export var parry_window_frames: int = 7
+@export var counter_window_frames: int = 48
 
 var _coyote_frames_left: int = 0
 var _jump_buffer_frames_left: int = 0
 var _state: MoveState = MoveState.GROUND_IDLE
 
+var _parry_frames_left: int = 0
+var _parry_hud_snapshot: int = 0
+var _counter_frames_left: int = 0
+var _combat_log: String = ""
+
+@onready var _hurtbox: Area2D = $Hurtbox
+@onready var _parry_box: Area2D = $ParryDetector
+@onready var _parry_shape: CollisionShape2D = $ParryDetector/CollisionShape2D
+
 
 func _ready() -> void:
 	if config == null:
 		config = MovementConfig.new()
-	collision_layer = 1
-	collision_mask = 1
+	collision_layer = 2 ## player (project layer_2)
+	collision_mask = 1 ## world
 	floor_snap_length = 6.0
 	up_direction = Vector2.UP
+
+	_hurtbox.collision_layer = 2
+	_hurtbox.collision_mask = 4
+	_hurtbox.monitorable = true
+	_hurtbox.monitoring = true
+
+	_parry_box.collision_layer = 8 ## player_parry (project layer_4)
+	_parry_box.collision_mask = 4
+	_parry_box.monitorable = true
+	_parry_box.monitoring = true
+	_parry_shape.disabled = true
 
 
 func _physics_process(delta: float) -> void:
@@ -32,6 +61,13 @@ func _physics_process(delta: float) -> void:
 	if jump_pressed:
 		_jump_buffer_frames_left = config.jump_buffer_frames
 
+	if Input.is_action_just_pressed(&"parry"):
+		_parry_frames_left = parry_window_frames
+	_parry_hud_snapshot = _parry_frames_left
+
+	if _counter_frames_left > 0:
+		_counter_frames_left -= 1
+
 	_apply_gravity(delta, on_floor)
 	_apply_horizontal(delta, on_floor)
 
@@ -44,7 +80,34 @@ func _physics_process(delta: float) -> void:
 		_jump_buffer_frames_left -= 1
 
 	move_and_slide()
+	_resolve_combat()
 	_refresh_state()
+
+	_parry_shape.disabled = _parry_frames_left <= 0
+	if _parry_frames_left > 0:
+		_parry_frames_left -= 1
+
+
+func _resolve_combat() -> void:
+	if _parry_frames_left > 0:
+		for a in _parry_box.get_overlapping_areas():
+			if a.get_script() != HitSourceScript:
+				continue
+			var outcome: Variant = (a as Area2D).call(&"try_apply_parry")
+			var oi := int(outcome)
+			if oi != PARRY_OUTCOME_NONE:
+				_combat_log = "PARRY -> %s" % _parry_outcome_label(oi)
+				if oi == PARRY_OUTCOME_COUNTER:
+					_counter_frames_left = counter_window_frames
+				return
+
+	for a in _hurtbox.get_overlapping_areas():
+		if a.get_script() != HitSourceScript:
+			continue
+		var can_hit: Variant = (a as Area2D).call(&"can_damage_player")
+		if bool(can_hit):
+			_combat_log = "HIT (lethal later)"
+			return
 
 
 func _apply_gravity(delta: float, on_floor: bool) -> void:
@@ -95,12 +158,31 @@ func _refresh_state() -> void:
 		_state = MoveState.AIR_FALL
 
 
+func _parry_outcome_label(outcome: int) -> String:
+	match outcome:
+		PARRY_OUTCOME_DEFLECT:
+			return "DEFLECT"
+		PARRY_OUTCOME_REFLECT:
+			return "REFLECT"
+		PARRY_OUTCOME_COUNTER:
+			return "COUNTER_WINDOW"
+		_:
+			return "NONE"
+
+
 func get_debug_overlay_text() -> String:
 	var state_name: String = MoveState.keys()[_state]
+	var counter_line := ""
+	if _counter_frames_left > 0:
+		counter_line = "counter window: %d\n" % _counter_frames_left
+	var combat := _combat_log if not _combat_log.is_empty() else "(no combat event)"
 	return (
 		"Player\n"
 		+ "state: %s\n" % state_name
 		+ "vel: (%.1f, %.1f)\n" % [velocity.x, velocity.y]
 		+ "floor: %s\n" % str(is_on_floor())
 		+ "coyote: %d  jump_buf: %d\n" % [_coyote_frames_left, _jump_buffer_frames_left]
+		+ "parry_frames: %d\n" % _parry_hud_snapshot
+		+ counter_line
+		+ "combat: %s\n" % combat
 	)

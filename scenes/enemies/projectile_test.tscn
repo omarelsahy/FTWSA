@@ -17,3 +17,8 @@ travel_velocity = Vector2(-280, 0)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("RectangleShape2D_proj")
+
+[node name="BoltVisual" type="Polygon2D" parent="."]
+z_index = 1
+color = Color(0.95, 0.82, 0.2, 1)
+polygon = PackedVector2Array(-14, -14, 14, -14, 14, 14, -14, 14)

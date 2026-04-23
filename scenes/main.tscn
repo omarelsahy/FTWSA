@@ -21,6 +21,11 @@ collision_mask = 2
 [node name="CollisionShape2D" type="CollisionShape2D" parent="World/Floor"]
 shape = SubResource("RectangleShape2D_floor")
 
+[node name="FloorVisual" type="Polygon2D" parent="World/Floor"]
+z_index = -2
+color = Color(0.32, 0.34, 0.4, 1)
+polygon = PackedVector2Array(-1200, -60, 1200, -60, 1200, 60, -1200, 60)
+
 [node name="Player" parent="World" instance=ExtResource("2_player")]
 position = Vector2(320, 578)
 

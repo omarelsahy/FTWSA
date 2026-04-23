@@ -7,6 +7,12 @@ size = Vector2(140, 36)
 
 [node name="MeleeTest" type="Node2D"]
 
+[node name="BodyVisual" type="Polygon2D" parent="."]
+z_index = -1
+position = Vector2(0, -6)
+color = Color(0.72, 0.28, 0.32, 1)
+polygon = PackedVector2Array(-26, -52, 26, -52, 26, 52, -26, 52)
+
 [node name="HitSource" type="Area2D" parent="."]
 position = Vector2(-96, 0)
 script = ExtResource("1_hit")
@@ -19,3 +25,8 @@ loop_attack = true
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="HitSource"]
 shape = SubResource("RectangleShape2D_melee")
+
+[node name="SwingVisual" type="Polygon2D" parent="HitSource"]
+z_index = -1
+color = Color(1, 0.5, 0.15, 0.45)
+polygon = PackedVector2Array(-70, -18, 70, -18, 70, 18, -70, 18)

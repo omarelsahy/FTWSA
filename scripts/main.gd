@@ -6,7 +6,7 @@ extends Node2D
 
 
 func _ready() -> void:
-	_debug.text = "FTWSA — move with stick/D-pad or A/D; Space jump; E parry; Shift/Z dodge"
+	_debug.text = "FTWSA — move with stick/D-pad or A/D; Space jump; E / RB parry; Shift/Z dodge"
 
 
 func _process(_delta: float) -> void:

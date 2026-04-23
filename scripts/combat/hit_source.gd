@@ -15,10 +15,13 @@ enum ParryOutcome { DEFLECT, REFLECT, COUNTER_WINDOW, NONE }
 @export var outcome_on_parry: ParryOutcome = ParryOutcome.DEFLECT
 @export var loop_attack: bool = true
 @export var travel_velocity: Vector2 = Vector2.ZERO
+## After a successful REFLECT parry, ignore further parries and player damage briefly (avoids flip spam while volumes overlap).
+@export var reflect_parry_cooldown_frames: int = 14
 
 var _phase: Phase = Phase.STARTUP
 var _phase_frames_left: int = 0
 var _parry_consumed: bool = false
+var _reflect_parry_cooldown: int = 0
 
 
 func _ready() -> void:
@@ -35,8 +38,13 @@ func _physics_process(delta: float) -> void:
 	if _phase_frames_left > 0:
 		_phase_frames_left -= 1
 	if _phase_frames_left > 0:
+		if _reflect_parry_cooldown > 0:
+			_reflect_parry_cooldown -= 1
 		return
 	_advance_phase()
+
+	if _reflect_parry_cooldown > 0:
+		_reflect_parry_cooldown -= 1
 
 
 func _begin_startup() -> void:
@@ -73,6 +81,8 @@ func is_parryable_now() -> bool:
 
 
 func can_damage_player() -> bool:
+	if _reflect_parry_cooldown > 0:
+		return false
 	return is_damage_active()
 
 
@@ -84,7 +94,10 @@ func try_apply_parry() -> ParryOutcome:
 		return ParryOutcome.NONE
 
 	if outcome_on_parry == ParryOutcome.REFLECT:
+		if _reflect_parry_cooldown > 0:
+			return ParryOutcome.NONE
 		travel_velocity.x *= -1.0
+		_reflect_parry_cooldown = reflect_parry_cooldown_frames
 		return ParryOutcome.REFLECT
 
 	if _parry_consumed:

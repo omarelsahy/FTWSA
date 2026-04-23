@@ -16,7 +16,7 @@ WinGet’s Godot package often **does not** add a `godot` command unless WinGet 
 
 On this machine, `F:\Projects\bin` is already on user `PATH` and includes `godot.cmd` plus the portable editor exe. If `godot` is still “not recognized” inside Cursor, **restart Cursor** (or open a new Windows terminal after a PATH change) so the process picks up the updated user environment.
 
-Default bindings are registered at runtime if missing (see `autoload/game_input.gd`): **WASD** + arrows, **Space** jump, **E** parry, **Shift/Z** dodge; gamepad uses **left stick + D-pad**, **A** jump, **LB** parry, **B** dodge.
+Default bindings are registered at runtime if missing (see `autoload/game_input.gd`): **WASD** + arrows, **Space** jump, **E** parry, **Shift/Z** dodge; gamepad uses **left stick + D-pad**, **A** jump, **RB** parry, **B** dodge.
 
 ### Combat prototype (greybox)
 

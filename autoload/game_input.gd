@@ -43,7 +43,7 @@ func _register_all() -> void:
 	_add_joy_button(&"jump", JOY_BUTTON_A)
 
 	_add_key(&"parry", KEY_E)
-	_add_joy_button(&"parry", JOY_BUTTON_LEFT_SHOULDER)
+	_add_joy_button(&"parry", JOY_BUTTON_RIGHT_SHOULDER)
 
 	_add_key(&"dodge", KEY_SHIFT)
 	_add_key(&"dodge", KEY_Z)

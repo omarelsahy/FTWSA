@@ -93,7 +93,7 @@ func _resolve_combat() -> void:
 		for a in _parry_box.get_overlapping_areas():
 			if a.get_script() != HitSourceScript:
 				continue
-			var outcome: Variant = (a as Area2D).call(&"try_apply_parry")
+			var outcome: Variant = (a as Area2D).call(&"try_apply_parry", self)
 			var oi := int(outcome)
 			if oi != PARRY_OUTCOME_NONE:
 				_combat_log = "PARRY -> %s" % _parry_outcome_label(oi)

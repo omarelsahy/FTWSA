@@ -17,6 +17,10 @@ enum ParryOutcome { DEFLECT, REFLECT, COUNTER_WINDOW, NONE }
 @export var travel_velocity: Vector2 = Vector2.ZERO
 ## After a successful REFLECT parry, ignore further parries and player damage briefly (avoids flip spam while volumes overlap).
 @export var reflect_parry_cooldown_frames: int = 14
+## REFLECT: if true, escape is horizontal only (sidescroller); if false, use full 2D away from `player`.
+@export var reflect_escape_horizontal_only: bool = true
+## Minimum speed applied when reflecting if `travel_velocity` is near zero.
+@export var reflect_min_speed: float = 260.0
 
 var _phase: Phase = Phase.STARTUP
 var _phase_frames_left: int = 0
@@ -86,8 +90,8 @@ func can_damage_player() -> bool:
 	return is_damage_active()
 
 
-## Returns NONE if the parry did not apply.
-func try_apply_parry() -> ParryOutcome:
+## Returns NONE if the parry did not apply. Pass `player` for REFLECT so velocity escapes away from them.
+func try_apply_parry(player: Node2D = null) -> ParryOutcome:
 	if parry_policy == ParryPolicy.UNPARRYABLE:
 		return ParryOutcome.NONE
 	if _phase != Phase.ACTIVE:
@@ -96,7 +100,10 @@ func try_apply_parry() -> ParryOutcome:
 	if outcome_on_parry == ParryOutcome.REFLECT:
 		if _reflect_parry_cooldown > 0:
 			return ParryOutcome.NONE
-		travel_velocity.x *= -1.0
+		if player != null and is_instance_valid(player):
+			_set_reflect_velocity_away_from(player)
+		else:
+			travel_velocity.x *= -1.0
 		_reflect_parry_cooldown = reflect_parry_cooldown_frames
 		return ParryOutcome.REFLECT
 
@@ -108,3 +115,26 @@ func try_apply_parry() -> ParryOutcome:
 	_phase = Phase.RECOVERY
 	_phase_frames_left = recovery_frames
 	return outcome_on_parry
+
+
+func _set_reflect_velocity_away_from(player: Node2D) -> void:
+	var rel := global_position - player.global_position
+	var speed := travel_velocity.length()
+	if speed < 1.0:
+		speed = reflect_min_speed
+
+	if reflect_escape_horizontal_only:
+		var ax := rel.x
+		if absf(ax) < 3.0:
+			## Same column as player: move opposite current horizontal travel (still away if we can infer).
+			ax = -travel_velocity.x
+		var dir_x := signf(ax)
+		if dir_x == 0.0:
+			dir_x = 1.0
+		travel_velocity = Vector2(dir_x * speed, 0.0)
+	else:
+		if rel.length_squared() < 1.0:
+			rel = Vector2(-signf(travel_velocity.x), -signf(travel_velocity.y))
+			if rel.length_squared() < 0.0001:
+				rel = Vector2.RIGHT
+		travel_velocity = rel.normalized() * speed

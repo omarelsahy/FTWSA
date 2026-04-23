@@ -20,7 +20,7 @@ Default bindings are registered at runtime if missing (see `autoload/game_input.
 
 ### Combat prototype (greybox)
 
-The main scene spawns a looping **melee** `HitSource` (parry grants **COUNTER_WINDOW** in the HUD) and a **projectile** `HitSource` moving left (**REFLECT** flips its X velocity). Parry uses a short **frontal parry volume**; the HUD shows the latest combat line (`PARRY -> …` / `HIT …`). Physics layers: `world`, `player`, `enemy_attack`, `player_parry` (see `project.godot`).
+The main scene spawns a looping **melee** `HitSource` (parry grants **COUNTER_WINDOW** in the HUD) and a **projectile** `HitSource` moving left (**REFLECT** sends it horizontally **away from the parrying player**, not a blind X flip). Parry uses a short **frontal parry volume**; the HUD shows the latest combat line (`PARRY -> …` / `HIT …`). Physics layers: `world`, `player`, `enemy_attack`, `player_parry` (see `project.godot`).
 
 ## Cross-device and AI context
 

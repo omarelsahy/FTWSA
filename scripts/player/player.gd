@@ -68,6 +68,7 @@ func _physics_process(delta: float) -> void:
 		_coyote_frames_left = maxi(0, _coyote_frames_left - 1)
 
 	var jump_pressed := Input.is_action_just_pressed(&"jump")
+	var jump_released := Input.is_action_just_released(&"jump")
 	if jump_pressed:
 		_jump_buffer_frames_left = config.jump_buffer_frames
 
@@ -88,6 +89,10 @@ func _physics_process(delta: float) -> void:
 
 	if _jump_buffer_frames_left > 0 and not jump_pressed:
 		_jump_buffer_frames_left -= 1
+
+	if jump_released and velocity.y < 0.0:
+		## Jump cut: releasing jump ends upward travel immediately.
+		velocity.y = 0.0
 
 	move_and_slide()
 	_resolve_combat()

@@ -15,8 +15,8 @@ extends Resource
 @export var air_speed_max: float = 320.0
 
 @export_group("Jump / Gravity")
-@export var jump_velocity: float = 450.0
-@export var gravity: float = 1850.0
+@export var jump_velocity: float = 900.0
+@export var gravity: float = 3700.0
 @export var fall_gravity_mult: float = 1.38
 @export var max_fall_speed: float = 1400.0
 ## Extra gravity while rising if jump is released (variable jump height).

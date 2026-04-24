@@ -11,7 +11,7 @@ func _ready() -> void:
 	if sc != null:
 		path = sc.scene_file_path
 	if path.ends_with("vertical_slice.tscn"):
-		_debug.text = "Vertical slice — gaps + ledge → parry drills → boss arena (jab + long UNPARRYABLE slam). E / RB parry."
+		_debug.text = "Vertical slice — gaps + ledge → parry drills → boss arena (jab + long telegraphed wide slam). E / RB parry."
 	else:
 		_debug.text = "FTWSA — move with stick/D-pad or A/D; Space jump; E / RB parry; Shift/Z dodge"
 

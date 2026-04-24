@@ -16,6 +16,8 @@ Short, factual notes so the next session—human or agent—starts aligned.
 - Installed Godot 4.6 to user-local path:
   - binary: `/home/ubuntu/.local/lib/godot/godot`
   - command: `/home/ubuntu/.local/bin/godot`
+- Added global symlink so non-login shells can call `godot` directly:
+  - `/usr/local/bin/godot -> /home/ubuntu/.local/lib/godot/godot`
 - Verified engine version: `4.6.stable.official.89cea1439`.
 - Verified project startup (headless game run):  
   `/home/ubuntu/.local/bin/godot --headless --path /workspace --quit-after 3`

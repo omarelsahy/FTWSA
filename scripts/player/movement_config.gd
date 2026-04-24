@@ -16,6 +16,10 @@ extends Resource
 
 @export_group("Jump / Gravity")
 @export var jump_velocity: float = 900.0
+## Extra jumps while airborne (1 = double jump). Refreshes on landing.
+@export var max_air_jumps: int = 1
+## Impulse for air jumps; ground/coyote jump still uses `jump_velocity`.
+@export var air_jump_velocity: float = 900.0
 @export var gravity: float = 3700.0
 @export var fall_gravity_mult: float = 1.38
 @export var max_fall_speed: float = 1400.0

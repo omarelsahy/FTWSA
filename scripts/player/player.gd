@@ -1,6 +1,6 @@
 class_name Player
 extends CharacterBody2D
-## Platform-fighter–style horizontal control with coyote time + jump buffer + parry window.
+## Platform-fighter–style horizontal control with coyote time + jump buffer + air jumps + parry window.
 
 const HitSourceScript := preload("res://scripts/combat/hit_source.gd")
 ## Must match `HitSource.ParryOutcome` declaration order.
@@ -21,6 +21,7 @@ enum MoveState { GROUND_IDLE, GROUND_RUN, AIR_RISE, AIR_FALL }
 
 var _coyote_frames_left: int = 0
 var _jump_buffer_frames_left: int = 0
+var _air_jumps_left: int = 0
 var _state: MoveState = MoveState.GROUND_IDLE
 
 var _parry_frames_left: int = 0
@@ -58,16 +59,21 @@ func _ready() -> void:
 	cam.limit_top = camera_limit_top
 	cam.limit_bottom = camera_limit_bottom
 
+	if not is_on_floor():
+		_air_jumps_left = config.max_air_jumps
+
 
 func _physics_process(delta: float) -> void:
 	var on_floor := is_on_floor()
 
 	if on_floor:
 		_coyote_frames_left = config.coyote_frames
+		_air_jumps_left = config.max_air_jumps
 	else:
 		_coyote_frames_left = maxi(0, _coyote_frames_left - 1)
 
 	var jump_pressed := Input.is_action_just_pressed(&"jump")
+	var jump_released := Input.is_action_just_released(&"jump")
 	if jump_pressed:
 		_jump_buffer_frames_left = config.jump_buffer_frames
 
@@ -85,9 +91,18 @@ func _physics_process(delta: float) -> void:
 		velocity.y = -config.jump_velocity
 		_jump_buffer_frames_left = 0
 		_coyote_frames_left = 0
+	elif _jump_buffer_frames_left > 0 and _air_jumps_left > 0:
+		velocity.y = -config.air_jump_velocity
+		_air_jumps_left -= 1
+		_jump_buffer_frames_left = 0
+		_coyote_frames_left = 0
 
 	if _jump_buffer_frames_left > 0 and not jump_pressed:
 		_jump_buffer_frames_left -= 1
+
+	if jump_released and velocity.y < 0.0:
+		## Jump cut: releasing jump flips into downward travel immediately.
+		velocity.y = config.gravity * delta
 
 	move_and_slide()
 	_resolve_combat()
@@ -191,7 +206,7 @@ func get_debug_overlay_text() -> String:
 		+ "state: %s\n" % state_name
 		+ "vel: (%.1f, %.1f)\n" % [velocity.x, velocity.y]
 		+ "floor: %s\n" % str(is_on_floor())
-		+ "coyote: %d  jump_buf: %d\n" % [_coyote_frames_left, _jump_buffer_frames_left]
+		+ "coyote: %d  jump_buf: %d  air_jumps: %d\n" % [_coyote_frames_left, _jump_buffer_frames_left, _air_jumps_left]
 		+ "parry_frames: %d\n" % _parry_hud_snapshot
 		+ counter_line
 		+ "combat: %s\n" % combat

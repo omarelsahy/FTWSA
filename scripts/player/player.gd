@@ -56,6 +56,7 @@ var _parry_frames_left: int = 0
 var _parry_hud_snapshot: int = 0
 var _counter_frames_left: int = 0
 var _combat_log: String = ""
+var _synthetic_input_x: Variant = null
 
 @onready var _hurtbox: Area2D = $Hurtbox
 @onready var _parry_box: Area2D = $ParryDetector
@@ -187,8 +188,10 @@ func _apply_gravity(delta: float, on_floor: bool) -> void:
 
 
 func _apply_horizontal(delta: float, on_floor: bool) -> void:
-	var input_x := Input.get_axis(&"move_left", &"move_right")
-	if on_floor and _is_ground_state(_state):
+	var input_x := _get_input_x()
+	if on_floor:
+		if _state == MoveState.AIR_RISE or _state == MoveState.AIR_FALL:
+			_state = MoveState.GROUND_IDLE
 		_apply_ground_horizontal(delta, input_x)
 	else:
 		_apply_air_horizontal(delta, input_x)
@@ -330,6 +333,12 @@ func _pick_air_accel(input_x: float) -> float:
 	return config.air_turn_accel if turning else config.air_accel
 
 
+func _get_input_x() -> float:
+	if _synthetic_input_x != null:
+		return _synthetic_input_x
+	return Input.get_axis(&"move_left", &"move_right")
+
+
 func _refresh_state() -> void:
 	if not is_on_floor():
 		if velocity.y < 0.0:
@@ -360,6 +369,15 @@ func get_facing() -> int:
 
 func get_move_state() -> MoveState:
 	return _state
+
+
+## Demo / test harness: override horizontal input for one physics tick chain.
+func set_synthetic_input_x(x: float) -> void:
+	_synthetic_input_x = x
+
+
+func clear_synthetic_input() -> void:
+	_synthetic_input_x = null
 
 
 ## Test harness hook for headless probes.

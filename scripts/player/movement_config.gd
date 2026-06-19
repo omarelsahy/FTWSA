@@ -1,12 +1,27 @@
 class_name MovementConfig
 extends Resource
-## Tunable movement knobs (Melee-like: separate ground/air, turnaround, buffers).
+## Tunable movement knobs (Melee-like: dash, run, turnaround, air control, buffers).
+
+@export_group("Dash / Run")
+## Burst speed during the initial dash (pixels/sec).
+@export var dash_speed: float = 450.0
+## Dash duration in physics frames at 60 Hz (~14 ≈ 0.23s).
+@export var dash_frames: int = 14
+## Sustained run speed after dash completes with direction held.
+@export var run_speed: float = 300.0
+## Acceleration toward `run_speed` while in run state.
+@export var run_accel: float = 2600.0
+## Horizontal speed threshold to enter run from a skid instead of a fresh dash.
+@export var run_enter_speed: float = 80.0
+
+@export_group("Turnaround")
+## Locked turnaround duration in physics frames.
+@export var turnaround_frames: int = 12
+## Deceleration applied during turnaround.
+@export var turnaround_friction: float = 3600.0
 
 @export_group("Ground")
-@export var ground_accel: float = 2600.0
-@export var ground_turn_accel: float = 4200.0
 @export var ground_friction: float = 2800.0
-@export var ground_speed_max: float = 300.0
 
 @export_group("Air")
 @export var air_accel: float = 1800.0

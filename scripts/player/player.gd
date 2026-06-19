@@ -1,15 +1,30 @@
 class_name Player
 extends CharacterBody2D
-## Platform-fighter–style horizontal control with coyote time + jump buffer + air jumps + parry window.
+## Platform-fighter–style movement: Melee-like dash / run / turnaround on ground, coyote + air jumps + parry.
 
 const HitSourceScript := preload("res://scripts/combat/hit_source.gd")
+const FantasyKnightSpriteFrames := preload("res://scripts/player/fantasy_knight_sprite_frames.gd")
 ## Must match `HitSource.ParryOutcome` declaration order.
 const PARRY_OUTCOME_DEFLECT := 0
 const PARRY_OUTCOME_REFLECT := 1
 const PARRY_OUTCOME_COUNTER := 2
 const PARRY_OUTCOME_NONE := 3
 
-enum MoveState { GROUND_IDLE, GROUND_RUN, AIR_RISE, AIR_FALL }
+enum MoveState {
+	GROUND_IDLE,
+	GROUND_DASH,
+	GROUND_RUN,
+	GROUND_TURNAROUND,
+	AIR_RISE,
+	AIR_FALL,
+}
+
+const _GROUND_STATES: Array[MoveState] = [
+	MoveState.GROUND_IDLE,
+	MoveState.GROUND_DASH,
+	MoveState.GROUND_RUN,
+	MoveState.GROUND_TURNAROUND,
+]
 
 @export var config: MovementConfig
 @export var parry_window_frames: int = 7
@@ -18,20 +33,28 @@ enum MoveState { GROUND_IDLE, GROUND_RUN, AIR_RISE, AIR_FALL }
 @export var camera_limit_right: int = 4400
 @export var camera_limit_top: int = -600
 @export var camera_limit_bottom: int = 900
+@export var parry_offset_x: float = 18.0
 
 var _coyote_frames_left: int = 0
 var _jump_buffer_frames_left: int = 0
 var _air_jumps_left: int = 0
 var _state: MoveState = MoveState.GROUND_IDLE
+var _facing: int = 1
+var _dash_frames_left: int = 0
+var _turnaround_frames_left: int = 0
+var _was_on_floor: bool = true
 
 var _parry_frames_left: int = 0
 var _parry_hud_snapshot: int = 0
 var _counter_frames_left: int = 0
 var _combat_log: String = ""
+var _synthetic_input_x: Variant = null
+var _last_anim_state: MoveState = MoveState.GROUND_IDLE
 
 @onready var _hurtbox: Area2D = $Hurtbox
 @onready var _parry_box: Area2D = $ParryDetector
 @onready var _parry_shape: CollisionShape2D = $ParryDetector/CollisionShape2D
+@onready var _anim_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 
 func _ready() -> void:
@@ -62,6 +85,10 @@ func _ready() -> void:
 	if not is_on_floor():
 		_air_jumps_left = config.max_air_jumps
 
+	_anim_sprite.sprite_frames = FantasyKnightSpriteFrames.build()
+	_sync_facing_visuals()
+	_sync_animation(true)
+
 
 func _physics_process(delta: float) -> void:
 	var on_floor := is_on_floor()
@@ -71,6 +98,9 @@ func _physics_process(delta: float) -> void:
 		_air_jumps_left = config.max_air_jumps
 	else:
 		_coyote_frames_left = maxi(0, _coyote_frames_left - 1)
+
+	if on_floor and not _was_on_floor:
+		_on_landed()
 
 	var jump_pressed := Input.is_action_just_pressed(&"jump")
 	var jump_released := Input.is_action_just_released(&"jump")
@@ -112,6 +142,8 @@ func _physics_process(delta: float) -> void:
 	if _parry_frames_left > 0:
 		_parry_frames_left -= 1
 
+	_was_on_floor = on_floor
+
 
 func _resolve_combat() -> void:
 	if _parry_frames_left > 0:
@@ -149,38 +181,238 @@ func _apply_gravity(delta: float, on_floor: bool) -> void:
 
 
 func _apply_horizontal(delta: float, on_floor: bool) -> void:
-	var input_x := Input.get_axis(&"move_left", &"move_right")
-	var target_speed: float = input_x * (config.ground_speed_max if on_floor else config.air_speed_max)
-	var accel := _pick_accel(on_floor, input_x)
-	var fric: float = config.ground_friction if on_floor else config.air_friction
+	var input_x := _get_input_x()
+	if on_floor:
+		if _state == MoveState.AIR_RISE or _state == MoveState.AIR_FALL:
+			_state = MoveState.GROUND_IDLE
+		_apply_ground_horizontal(delta, input_x)
+	else:
+		_apply_air_horizontal(delta, input_x)
+
+
+func _apply_ground_horizontal(delta: float, input_x: float) -> void:
+	match _state:
+		MoveState.GROUND_IDLE:
+			_tick_ground_idle(delta, input_x)
+		MoveState.GROUND_DASH:
+			_tick_ground_dash(input_x)
+		MoveState.GROUND_RUN:
+			_tick_ground_run(delta, input_x)
+		MoveState.GROUND_TURNAROUND:
+			_tick_ground_turnaround(delta, input_x)
+
+
+func _tick_ground_idle(delta: float, input_x: float) -> void:
+	if absf(velocity.x) >= config.run_enter_speed:
+		if not is_zero_approx(input_x) and signf(input_x) == signf(velocity.x):
+			_facing = int(signf(velocity.x))
+			_enter_run()
+			_sync_facing_visuals()
+			return
+		velocity.x = move_toward(velocity.x, 0.0, config.ground_friction * delta)
+		return
+
+	if not is_zero_approx(input_x):
+		_start_dash(int(signf(input_x)))
+		return
+
+	velocity.x = move_toward(velocity.x, 0.0, config.ground_friction * delta)
+
+
+func _tick_ground_dash(input_x: float) -> void:
+	if not is_zero_approx(input_x) and signf(input_x) != float(_facing):
+		## Dash dance: reverse instantly while still in dash.
+		_start_dash(int(signf(input_x)))
+		return
+
+	_dash_frames_left -= 1
+	velocity.x = float(_facing) * config.dash_speed
+
+	if _dash_frames_left > 0:
+		return
+
+	if not is_zero_approx(input_x) and signf(input_x) == float(_facing):
+		_enter_run()
+	else:
+		_state = MoveState.GROUND_IDLE
+
+
+func _tick_ground_run(delta: float, input_x: float) -> void:
+	if is_zero_approx(input_x):
+		_state = MoveState.GROUND_IDLE
+		velocity.x = move_toward(velocity.x, 0.0, config.ground_friction * delta)
+		return
+
+	if signf(input_x) != float(_facing):
+		_start_turnaround()
+		return
+
+	velocity.x = move_toward(
+		velocity.x,
+		float(_facing) * config.run_speed,
+		config.run_accel * delta
+	)
+
+
+func _tick_ground_turnaround(delta: float, input_x: float) -> void:
+	_turnaround_frames_left -= 1
+	velocity.x = move_toward(velocity.x, 0.0, config.turnaround_friction * delta)
+
+	if _turnaround_frames_left > 0:
+		return
+
+	_facing *= -1
+	_sync_facing_visuals()
+
+	if not is_zero_approx(input_x) and signf(input_x) == float(_facing):
+		_enter_run()
+	elif not is_zero_approx(input_x):
+		_start_dash(int(signf(input_x)))
+	else:
+		_state = MoveState.GROUND_IDLE
+
+
+func _start_dash(dir: int) -> void:
+	_facing = dir
+	_state = MoveState.GROUND_DASH
+	_dash_frames_left = config.dash_frames
+	_turnaround_frames_left = 0
+	velocity.x = float(_facing) * config.dash_speed
+	_sync_facing_visuals()
+	_play_dash_animation()
+
+
+func _enter_run() -> void:
+	_state = MoveState.GROUND_RUN
+	_dash_frames_left = 0
+	_turnaround_frames_left = 0
+
+
+func _start_turnaround() -> void:
+	_state = MoveState.GROUND_TURNAROUND
+	_turnaround_frames_left = config.turnaround_frames
+	_dash_frames_left = 0
+	_play_turnaround_animation()
+
+
+func _on_landed() -> void:
+	if absf(velocity.x) >= config.run_enter_speed:
+		_facing = int(signf(velocity.x)) if not is_zero_approx(velocity.x) else _facing
+		_enter_run()
+		_sync_facing_visuals()
+	else:
+		_state = MoveState.GROUND_IDLE
+	_dash_frames_left = 0
+	_turnaround_frames_left = 0
+
+
+func _apply_air_horizontal(delta: float, input_x: float) -> void:
+	var target_speed: float = input_x * config.air_speed_max
+	var accel := _pick_air_accel(input_x)
 
 	if is_zero_approx(input_x):
-		velocity.x = move_toward(velocity.x, 0.0, fric * delta)
+		velocity.x = move_toward(velocity.x, 0.0, config.air_friction * delta)
 	else:
 		velocity.x = move_toward(velocity.x, target_speed, accel * delta)
+		if not is_zero_approx(velocity.x):
+			_facing = int(signf(velocity.x))
+			_sync_facing_visuals()
 
 
-func _pick_accel(on_floor: bool, input_x: float) -> float:
+func _pick_air_accel(input_x: float) -> float:
 	var turning := (
 		not is_zero_approx(velocity.x)
 		and not is_zero_approx(input_x)
 		and signf(velocity.x) != signf(input_x)
 	)
-	if on_floor:
-		return config.ground_turn_accel if turning else config.ground_accel
 	return config.air_turn_accel if turning else config.air_accel
 
 
+func _get_input_x() -> float:
+	if _synthetic_input_x != null:
+		return _synthetic_input_x
+	return Input.get_axis(&"move_left", &"move_right")
+
+
 func _refresh_state() -> void:
-	if is_on_floor():
-		if absf(velocity.x) < 12.0:
-			_state = MoveState.GROUND_IDLE
+	if not is_on_floor():
+		if velocity.y < 0.0:
+			_state = MoveState.AIR_RISE
 		else:
-			_state = MoveState.GROUND_RUN
-	elif velocity.y < 0.0:
-		_state = MoveState.AIR_RISE
+			_state = MoveState.AIR_FALL
+	if _state != _last_anim_state:
+		_sync_animation()
+
+
+func _is_ground_state(state: MoveState) -> bool:
+	return state in _GROUND_STATES
+
+
+func _sync_facing_visuals() -> void:
+	_anim_sprite.flip_h = _facing < 0
+	_parry_shape.position.x = parry_offset_x * float(_facing)
+
+
+func _sync_animation(force: bool = false) -> void:
+	if not force and _state == _last_anim_state:
+		return
+
+	_last_anim_state = _state
+	match _state:
+		MoveState.GROUND_IDLE:
+			_anim_sprite.play(&"idle")
+		MoveState.GROUND_DASH:
+			_play_dash_animation()
+		MoveState.GROUND_RUN:
+			_anim_sprite.play(&"run")
+		MoveState.GROUND_TURNAROUND:
+			_play_turnaround_animation()
+		MoveState.AIR_RISE:
+			_anim_sprite.play(&"jump")
+		MoveState.AIR_FALL:
+			_anim_sprite.play(&"fall")
+
+
+func _play_dash_animation() -> void:
+	_last_anim_state = MoveState.GROUND_DASH
+	_anim_sprite.play(&"dash")
+
+
+func _play_turnaround_animation() -> void:
+	_last_anim_state = MoveState.GROUND_TURNAROUND
+	if _facing > 0:
+		_anim_sprite.play(&"turn_around")
 	else:
-		_state = MoveState.AIR_FALL
+		_anim_sprite.play_backwards(&"turn_around")
+
+
+func get_facing() -> int:
+	return _facing
+
+
+func get_move_state() -> MoveState:
+	return _state
+
+
+## Demo / test harness: override horizontal input for one physics tick chain.
+func set_synthetic_input_x(x: float) -> void:
+	_synthetic_input_x = x
+
+
+func clear_synthetic_input() -> void:
+	_synthetic_input_x = null
+
+
+## Test harness hook for headless probes.
+func set_move_state(state: MoveState) -> void:
+	_state = state
+	_dash_frames_left = 0
+	_turnaround_frames_left = 0
+	_sync_animation(true)
+
+
+func get_ground_substate_frames() -> Vector2i:
+	return Vector2i(_dash_frames_left, _turnaround_frames_left)
 
 
 func _parry_outcome_label(outcome: int) -> String:
@@ -197,6 +429,11 @@ func _parry_outcome_label(outcome: int) -> String:
 
 func get_debug_overlay_text() -> String:
 	var state_name: String = MoveState.keys()[_state]
+	var substate := ""
+	if _state == MoveState.GROUND_DASH:
+		substate = "dash_frames: %d\n" % _dash_frames_left
+	elif _state == MoveState.GROUND_TURNAROUND:
+		substate = "turnaround_frames: %d\n" % _turnaround_frames_left
 	var counter_line := ""
 	if _counter_frames_left > 0:
 		counter_line = "counter window: %d\n" % _counter_frames_left
@@ -204,6 +441,8 @@ func get_debug_overlay_text() -> String:
 	return (
 		"Player\n"
 		+ "state: %s\n" % state_name
+		+ "facing: %s\n" % ("right" if _facing > 0 else "left")
+		+ substate
 		+ "vel: (%.1f, %.1f)\n" % [velocity.x, velocity.y]
 		+ "floor: %s\n" % str(is_on_floor())
 		+ "coyote: %d  jump_buf: %d  air_jumps: %d\n" % [_coyote_frames_left, _jump_buffer_frames_left, _air_jumps_left]

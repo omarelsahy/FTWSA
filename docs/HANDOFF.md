@@ -4,7 +4,7 @@ Short, factual notes so the next session—human or agent—starts aligned.
 
 ## Current focus
 
-- Development environment bring-up and run validation in Cursor Cloud (Linux).
+- Environment reliability after snapshot expiry fallback in Cursor Cloud (Linux).
 
 ## Recent decisions
 
@@ -13,25 +13,18 @@ Short, factual notes so the next session—human or agent—starts aligned.
 
 ## Done recently
 
-- Installed Godot 4.6 to user-local path:
-  - binary: `/home/ubuntu/.local/lib/godot/godot`
-  - command: `/home/ubuntu/.local/bin/godot`
-- Added global symlink so non-login shells can call `godot` directly:
-  - `/usr/local/bin/godot -> /home/ubuntu/.local/lib/godot/godot`
-- Verified engine version: `4.6.stable.official.89cea1439`.
-- Verified project startup (headless game run):  
-  `/home/ubuntu/.local/bin/godot --headless --path /workspace --quit-after 3`
-- Ran one-time import/bootstrap step (headless editor):  
-  `/home/ubuntu/.local/bin/godot --headless --editor --path /workspace --quit-after 5`
+- Added idempotent cloud startup/update script plan: if `godot` is missing, download/install Godot 4.6, restore `/home/ubuntu/.local/bin/godot`, and restore `/usr/local/bin/godot`.
+- Verified update script behavior and engine command output (`4.6.stable.official.89cea1439`).
+- Re-validated project startup via headless run after script execution.
 
 ## Next steps
 
-1. Run GUI playtest via `godot --path /workspace` and confirm debug HUD + controls.
-2. If future cloud sessions repeat setup, add a cloud env setup profile to preinstall Godot 4.6.
+1. Keep startup script as source-of-truth for dependency refresh when snapshot fallback happens.
+2. If setup time becomes costly, move Godot installation into base cloud environment provisioning.
 
 ## Open questions / risks
 
-- Godot is installed per-user in the current VM; fresh VMs may need the same bootstrap until environment setup is automated.
+- Download/install step depends on GitHub release availability during startup.
 
 ## Pointers
 

@@ -19,3 +19,9 @@ Prefer **short summaries** in `docs/agent-chats/` for important threads; paste o
 ## When you finish a meaningful chunk of work
 
 Update `docs/HANDOFF.md`: what was done, what is next, any open questions or risks.
+
+## Cursor Cloud specific instructions
+
+- If a cloud VM falls back to the default environment, `godot` may be missing. Use the VM startup update script (configured via `SetupVmEnvironment`) to auto-install Godot 4.6 and restore the `/usr/local/bin/godot` command.
+- On a clean environment, run one editor bootstrap pass before runtime checks: `godot --headless --editor --path /workspace --quit-after 5`. This primes imports and global classes.
+- `autoload/greybox_audio.gd.uid` and `scripts/props/greybox_platform.gd.uid` can be regenerated locally by Godot; leave them uncommitted unless the team intentionally decides to track them.

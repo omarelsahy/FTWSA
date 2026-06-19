@@ -4,7 +4,7 @@ Short, factual notes so the next session—human or agent—starts aligned.
 
 ## Current focus
 
-- Core movement tuning: variable jump height is in and baseline jump arcs were doubled.
+- Player placeholder art: Fantasy Knight sprites wired to movement (idle/run/jump/fall, turn-around, dash on dodge).
 
 ## Recent decisions
 
@@ -14,6 +14,9 @@ Short, factual notes so the next session—human or agent—starts aligned.
 
 ## Done recently
 
+- Downloaded and trimmed **Fantasy Knight** sheets into `assets/characters/fantasy_knight/sheets/` (see `ATTRIBUTION.md`).
+- Replaced player `Sprite2D` icon with `AnimatedSprite2D`; `FantasyKnightSpriteFrames` builds `SpriteFrames` at runtime.
+- Player visuals: locomotion clips from move state; `turn_around` on ground direction change; `dash` on dodge input (Shift/Z / B).
 - Added variable jump behavior in `scripts/player/player.gd` using `Input.is_action_just_released("jump")` while ascent is active.
 - Verified behavior with a headless probe run (short hold: `15.07px`, long hold: `96.69px`, release-to-fall: `1` frame, PASS).
 

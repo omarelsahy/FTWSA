@@ -3,6 +3,7 @@ extends CharacterBody2D
 ## Platform-fighter–style horizontal control with coyote time + jump buffer + air jumps + parry window.
 
 const HitSourceScript := preload("res://scripts/combat/hit_source.gd")
+const FantasyKnightSpriteFrames := preload("res://scripts/player/fantasy_knight_sprite_frames.gd")
 ## Must match `HitSource.ParryOutcome` declaration order.
 const PARRY_OUTCOME_DEFLECT := 0
 const PARRY_OUTCOME_REFLECT := 1
@@ -10,6 +11,7 @@ const PARRY_OUTCOME_COUNTER := 2
 const PARRY_OUTCOME_NONE := 3
 
 enum MoveState { GROUND_IDLE, GROUND_RUN, AIR_RISE, AIR_FALL }
+enum VisualLock { NONE, TURN, DASH }
 
 @export var config: MovementConfig
 @export var parry_window_frames: int = 7
@@ -29,9 +31,15 @@ var _parry_hud_snapshot: int = 0
 var _counter_frames_left: int = 0
 var _combat_log: String = ""
 
+var _facing: int = 1
+var _turn_target_facing: int = 1
+var _visual_lock: VisualLock = VisualLock.NONE
+var _last_locomotion_anim: StringName = &""
+
 @onready var _hurtbox: Area2D = $Hurtbox
 @onready var _parry_box: Area2D = $ParryDetector
 @onready var _parry_shape: CollisionShape2D = $ParryDetector/CollisionShape2D
+@onready var _anim_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 
 func _ready() -> void:
@@ -59,12 +67,17 @@ func _ready() -> void:
 	cam.limit_top = camera_limit_top
 	cam.limit_bottom = camera_limit_bottom
 
+	_anim_sprite.sprite_frames = FantasyKnightSpriteFrames.build()
+	_anim_sprite.animation_finished.connect(_on_animation_finished)
+	_play_locomotion_anim(&"idle")
+
 	if not is_on_floor():
 		_air_jumps_left = config.max_air_jumps
 
 
 func _physics_process(delta: float) -> void:
 	var on_floor := is_on_floor()
+	var input_x := Input.get_axis(&"move_left", &"move_right")
 
 	if on_floor:
 		_coyote_frames_left = config.coyote_frames
@@ -84,8 +97,13 @@ func _physics_process(delta: float) -> void:
 	if _counter_frames_left > 0:
 		_counter_frames_left -= 1
 
+	if Input.is_action_just_pressed(&"dodge"):
+		_try_start_dash()
+
+	_try_start_turn(input_x)
+
 	_apply_gravity(delta, on_floor)
-	_apply_horizontal(delta, on_floor)
+	_apply_horizontal(delta, on_floor, input_x)
 
 	if _jump_buffer_frames_left > 0 and (on_floor or _coyote_frames_left > 0):
 		velocity.y = -config.jump_velocity
@@ -107,10 +125,90 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_resolve_combat()
 	_refresh_state()
+	_update_facing(input_x)
+	_update_locomotion_animation()
 
 	_parry_shape.disabled = _parry_frames_left <= 0
 	if _parry_frames_left > 0:
 		_parry_frames_left -= 1
+
+
+func _try_start_dash() -> void:
+	if _visual_lock == VisualLock.TURN:
+		return
+	_visual_lock = VisualLock.DASH
+	_last_locomotion_anim = &""
+	_anim_sprite.play(&"dash")
+
+
+func _try_start_turn(input_x: float) -> void:
+	if _visual_lock != VisualLock.NONE:
+		return
+	if not is_on_floor():
+		return
+	if is_zero_approx(input_x):
+		return
+
+	var desired_facing := 1 if input_x > 0.0 else -1
+	if desired_facing == _facing:
+		return
+
+	_turn_target_facing = desired_facing
+	_visual_lock = VisualLock.TURN
+	_last_locomotion_anim = &""
+	if desired_facing < 0:
+		_anim_sprite.play(&"turn_around")
+	else:
+		_anim_sprite.play_backwards(&"turn_around")
+
+
+func _update_facing(input_x: float) -> void:
+	if _visual_lock != VisualLock.NONE:
+		return
+	if not is_zero_approx(velocity.x):
+		_facing = signi(int(signf(velocity.x)))
+	elif not is_zero_approx(input_x):
+		_facing = 1 if input_x > 0.0 else -1
+	_anim_sprite.flip_h = _facing < 0
+
+
+func _update_locomotion_animation() -> void:
+	if _visual_lock != VisualLock.NONE:
+		return
+
+	var anim_name: StringName = &"idle"
+	match _state:
+		MoveState.GROUND_IDLE:
+			anim_name = &"idle"
+		MoveState.GROUND_RUN:
+			anim_name = &"run"
+		MoveState.AIR_RISE:
+			anim_name = &"jump"
+		MoveState.AIR_FALL:
+			anim_name = &"fall"
+
+	_play_locomotion_anim(anim_name)
+
+
+func _play_locomotion_anim(anim_name: StringName) -> void:
+	if _last_locomotion_anim == anim_name:
+		return
+	_last_locomotion_anim = anim_name
+	_anim_sprite.play(anim_name)
+
+
+func _on_animation_finished() -> void:
+	match _anim_sprite.animation:
+		&"turn_around":
+			_facing = _turn_target_facing
+			_anim_sprite.flip_h = _facing < 0
+			_visual_lock = VisualLock.NONE
+			_last_locomotion_anim = &""
+			_update_locomotion_animation()
+		&"dash":
+			_visual_lock = VisualLock.NONE
+			_last_locomotion_anim = &""
+			_update_locomotion_animation()
 
 
 func _resolve_combat() -> void:
@@ -148,8 +246,7 @@ func _apply_gravity(delta: float, on_floor: bool) -> void:
 	velocity.y = minf(config.max_fall_speed, velocity.y + g * delta)
 
 
-func _apply_horizontal(delta: float, on_floor: bool) -> void:
-	var input_x := Input.get_axis(&"move_left", &"move_right")
+func _apply_horizontal(delta: float, on_floor: bool, input_x: float) -> void:
 	var target_speed: float = input_x * (config.ground_speed_max if on_floor else config.air_speed_max)
 	var accel := _pick_accel(on_floor, input_x)
 	var fric: float = config.ground_friction if on_floor else config.air_friction

@@ -4,14 +4,12 @@ Short, factual notes so the next session—human or agent—starts aligned.
 
 ## Current focus
 
-- Melee-style ground movement: dash → run, turnaround from run, dash dance during dash.
+- Melee-style ground movement with Fantasy Knight sprite animations wired to the FSM.
 
 ## Recent decisions
 
-- Ground horizontal control is now a discrete state machine (`IDLE`, `DASH`, `RUN`, `TURNAROUND`) instead of accel-only `move_toward` on the floor.
-- From idle, horizontal input starts a timed dash; holding through dash end enters run; reversing during dash instantly flips dash direction (dash dance); reversing during run enters a locked turnaround.
-- Air movement keeps the prior accel/friction model. Greybox visuals use per-state sprite tint/scale until real animations land.
-- Headless probe at `scenes/tests/ground_movement_test.tscn` validates dash, dash→run, run→turnaround, turnaround→run, and dash dance.
+- Player uses `AnimatedSprite2D` + `FantasyKnightSpriteFrames` (idle, dash, run, turn_around, jump, fall) keyed off `MoveState`.
+- Greybox tint/scale visuals removed; dash animation loops during dash state and restarts on dash dance reversal.
 
 ## Done recently
 

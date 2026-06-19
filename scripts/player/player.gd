@@ -3,6 +3,7 @@ extends CharacterBody2D
 ## Platform-fighter–style movement: Melee-like dash / run / turnaround on ground, coyote + air jumps + parry.
 
 const HitSourceScript := preload("res://scripts/combat/hit_source.gd")
+const FantasyKnightSpriteFrames := preload("res://scripts/player/fantasy_knight_sprite_frames.gd")
 ## Must match `HitSource.ParryOutcome` declaration order.
 const PARRY_OUTCOME_DEFLECT := 0
 const PARRY_OUTCOME_REFLECT := 1
@@ -24,15 +25,6 @@ const _GROUND_STATES: Array[MoveState] = [
 	MoveState.GROUND_RUN,
 	MoveState.GROUND_TURNAROUND,
 ]
-
-const _STATE_VISUALS: Dictionary = {
-	MoveState.GROUND_IDLE: {"color": Color.WHITE, "scale_y": 1.0},
-	MoveState.GROUND_DASH: {"color": Color(0.55, 0.85, 1.0), "scale_y": 0.88},
-	MoveState.GROUND_RUN: {"color": Color(0.7, 1.0, 0.75), "scale_y": 1.0},
-	MoveState.GROUND_TURNAROUND: {"color": Color(1.0, 0.88, 0.45), "scale_y": 0.95},
-	MoveState.AIR_RISE: {"color": Color(0.85, 0.85, 1.0), "scale_y": 1.0},
-	MoveState.AIR_FALL: {"color": Color(0.9, 0.9, 0.95), "scale_y": 1.0},
-}
 
 @export var config: MovementConfig
 @export var parry_window_frames: int = 7
@@ -57,12 +49,12 @@ var _parry_hud_snapshot: int = 0
 var _counter_frames_left: int = 0
 var _combat_log: String = ""
 var _synthetic_input_x: Variant = null
+var _last_anim_state: MoveState = MoveState.GROUND_IDLE
 
 @onready var _hurtbox: Area2D = $Hurtbox
 @onready var _parry_box: Area2D = $ParryDetector
 @onready var _parry_shape: CollisionShape2D = $ParryDetector/CollisionShape2D
-@onready var _sprite: Sprite2D = $Sprite2D
-@onready var _sprite_base_scale: Vector2 = _sprite.scale
+@onready var _anim_sprite: AnimatedSprite2D = $AnimatedSprite2D
 
 
 func _ready() -> void:
@@ -93,8 +85,9 @@ func _ready() -> void:
 	if not is_on_floor():
 		_air_jumps_left = config.max_air_jumps
 
+	_anim_sprite.sprite_frames = FantasyKnightSpriteFrames.build()
 	_sync_facing_visuals()
-	_sync_state_visuals()
+	_sync_animation(true)
 
 
 func _physics_process(delta: float) -> void:
@@ -286,6 +279,7 @@ func _start_dash(dir: int) -> void:
 	_turnaround_frames_left = 0
 	velocity.x = float(_facing) * config.dash_speed
 	_sync_facing_visuals()
+	_play_dash_animation()
 
 
 func _enter_run() -> void:
@@ -298,6 +292,7 @@ func _start_turnaround() -> void:
 	_state = MoveState.GROUND_TURNAROUND
 	_turnaround_frames_left = config.turnaround_frames
 	_dash_frames_left = 0
+	_play_turnaround_animation()
 
 
 func _on_landed() -> void:
@@ -345,7 +340,8 @@ func _refresh_state() -> void:
 			_state = MoveState.AIR_RISE
 		else:
 			_state = MoveState.AIR_FALL
-	_sync_state_visuals()
+	if _state != _last_anim_state:
+		_sync_animation()
 
 
 func _is_ground_state(state: MoveState) -> bool:
@@ -353,14 +349,41 @@ func _is_ground_state(state: MoveState) -> bool:
 
 
 func _sync_facing_visuals() -> void:
-	_sprite.flip_h = _facing < 0
+	_anim_sprite.flip_h = _facing < 0
 	_parry_shape.position.x = parry_offset_x * float(_facing)
 
 
-func _sync_state_visuals() -> void:
-	var visual: Dictionary = _STATE_VISUALS.get(_state, _STATE_VISUALS[MoveState.GROUND_IDLE])
-	_sprite.modulate = visual["color"]
-	_sprite.scale = Vector2(_sprite_base_scale.x, _sprite_base_scale.y * visual["scale_y"])
+func _sync_animation(force: bool = false) -> void:
+	if not force and _state == _last_anim_state:
+		return
+
+	_last_anim_state = _state
+	match _state:
+		MoveState.GROUND_IDLE:
+			_anim_sprite.play(&"idle")
+		MoveState.GROUND_DASH:
+			_play_dash_animation()
+		MoveState.GROUND_RUN:
+			_anim_sprite.play(&"run")
+		MoveState.GROUND_TURNAROUND:
+			_play_turnaround_animation()
+		MoveState.AIR_RISE:
+			_anim_sprite.play(&"jump")
+		MoveState.AIR_FALL:
+			_anim_sprite.play(&"fall")
+
+
+func _play_dash_animation() -> void:
+	_last_anim_state = MoveState.GROUND_DASH
+	_anim_sprite.play(&"dash")
+
+
+func _play_turnaround_animation() -> void:
+	_last_anim_state = MoveState.GROUND_TURNAROUND
+	if _facing > 0:
+		_anim_sprite.play(&"turn_around")
+	else:
+		_anim_sprite.play_backwards(&"turn_around")
 
 
 func get_facing() -> int:
@@ -385,7 +408,7 @@ func set_move_state(state: MoveState) -> void:
 	_state = state
 	_dash_frames_left = 0
 	_turnaround_frames_left = 0
-	_sync_state_visuals()
+	_sync_animation(true)
 
 
 func get_ground_substate_frames() -> Vector2i:

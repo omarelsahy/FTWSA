@@ -10,10 +10,10 @@ var _frame := 0
 
 ## [duration_frames, input_x, title, hint]
 const _SEQUENCE: Array = [
-	[20, 0.0, "Melee ground movement", "Greybox demo — watch sprite tint + state label"],
-	[18, 1.0, "1/4 — Dash from idle", "Burst right: cyan tint, fixed dash speed"],
-	[36, 1.0, "2/4 — Dash → Run", "Hold right: transitions to green run"],
-	[30, -1.0, "3/4 — Run → Turnaround", "Reverse while running: yellow pivot (locked)"],
+	[20, 0.0, "Melee ground movement", "Fantasy Knight sprites — watch animation clips"],
+	[18, 1.0, "1/4 — Dash from idle", "dash animation burst from standstill"],
+	[36, 1.0, "2/4 — Dash → Run", "Hold right: transitions to run loop"],
+	[30, -1.0, "3/4 — Run → Turnaround", "Reverse while running: turn_around clip"],
 	[36, -1.0, "3/4 — Turnaround → Run", "Pivot completes, run left (green)"],
 	[12, 1.0, "4/4 — Dash dance setup", "Fresh dash right…"],
 	[54, 0.0, "4/4 — Dash dance", "Tap opposite mid-dash — instant reversals"],
